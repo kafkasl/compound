@@ -10,45 +10,54 @@ def HeatmapComponent(heatmap_data):
     dates = heatmap_data["dates"]
     z_values = heatmap_data["data"]
     counts = heatmap_data.get("counts", None)
-    units = heatmap_data.get("units", [""] * len(habit_names))  # Get units or empty strings
+    units = heatmap_data.get("units", [""] * len(habit_names))
     
     # Create empty placeholder if no data
     if not habit_names or not dates:
         return Card(P("No habit data recorded yet", cls=TextPresets.muted_sm))
     
-    # Normalize each row (each habit's values) to 0-1 scale
-    normalized_z = []
-    for row in z_values:
-        max_val = max(row) if max(row) > 0 else 1  # Avoid division by zero
-        normalized_row = [val/max_val for val in row]
-        normalized_z.append(normalized_row)
+    # Find the maximum count value across all habits
+    max_count = 1
+    for row in counts:
+        row_max = max(row) if row else 0
+        max_count = max(max_count, row_max)
     
     # Create hover text matrix with actual values
     hover_text = []
     for i, habit in enumerate(habit_names):
         hover_row = []
-        unit = units[i]  # Get unit for this habit
+        unit = units[i]
         
         for j, date in enumerate(dates):
             volume = z_values[i][j]
             count = counts[i][j] if counts else None
             
             txt = f"{habit}<br>Date: {date.strftime('%Y-%m-%d')}"
-            if volume > 0:
+            if count > 0:
                 txt += f"<br>Count: {count}×"
                 txt += f"<br>Total: {volume} {unit}"
 
             hover_row.append(txt)
         hover_text.append(hover_row)
     
-    # Create heatmap
+    # GitHub-like colorscale
+    custom_colorscale = [
+        [0, "rgba(235, 237, 240, 1)"],    # Light gray for zero
+        [0.0001, "rgba(155, 233, 168, 1)"], # Light green for very small values
+        [0.5, "rgba(64, 196, 99, 1)"],    # Medium green
+        [1, "rgba(33, 110, 57, 1)"]       # Dark green
+    ]
+    
     fig = go.Figure(data=go.Heatmap(
-        z=normalized_z,
+        z=counts,
         x=dates,
         y=habit_names,
-        colorscale='Viridis',
+        colorscale=custom_colorscale,
         hoverinfo='text',
-        text=hover_text
+        text=hover_text,
+        # Make sure 0 is distinctly colored
+        zmin=0,
+        zmax=max_count
     ))
     
     fig.update_layout(
