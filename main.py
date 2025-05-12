@@ -29,6 +29,37 @@ def NewHabitForm():
         hx_swap_oob="true"
     )
 
+def HabitCard(h):
+    # Display today's total along with the habit name
+    today_total = h.get("today_total", 0)
+    today_count = h.get("today_count", 0)
+    unit_display = h["unit"] if h["unit"] else ""
+    
+    return Card(
+        Form(
+            DivHStacked(
+                Div(
+                    H4(h["name"]),
+                    P(f"Today: {today_count}× ({today_total} {unit_display})", cls=TextPresets.muted_sm),
+                    cls="min-w-40"
+                ),
+                Div(
+                    Range(
+                        label=h["unit"],
+                        id=f"track-input-{h['id']}", name="value", value=str(h["default_value"]), 
+                        min=0, max=60, step=1, hx_trigger="change"
+                    ),
+                    cls="flex-1 px-4"
+                ),
+                Button("Track"),
+                Input(type="hidden", name="habit_id", value=h["id"]),
+            ),
+            hx_post=track_habit,
+            hx_swap="outerHTML", hx_target="closest .habit-card"
+        ),
+        cls="habit-card"
+    )
+
 def HeatmapComponent():
     # Create GitHub heatmap
     heatmap_data = db.get_heatmap_data()
@@ -69,29 +100,11 @@ def HeatmapComponent():
 
 @app.get
 def index():
-    habits = db.get_habits()
+    habits = db.get_habits_with_counts()
     today = dt.date.today().strftime("%A, %B %d, %Y")
     
     print(f"{habits=}")
-    cards = [
-        Card(Form(
-                DivHStacked(
-                    P(h["name"]),
-                    Div(
-                        Range(
-                            label=h["unit"],
-                            id=f"track-input-{h['id']}", name="value", value=str(h["default_value"]), 
-                            min=0, max=60, step=1, hx_trigger="change"
-                        ),
-                        cls="flex-1 px-4"
-                    ),
-                    Button("Track"),
-                    Input(type="hidden", name="habit_id", value=h["id"]),
-                ),
-                hx_post=track_habit
-            ),
-        ) for h in habits
-    ]
+    cards = [HabitCard(h) for h in habits ]
     
     # GitHub-style heatmap
     github_heatmap = HeatmapComponent()
@@ -117,8 +130,13 @@ def add_habit(name: str, unit: str, value: str):
 def track_habit(habit_id: str, value: float):
     print(f"habit_id: {habit_id=}, value: {value=}")
     db.record_habit(habit_id, float(value))
-    return Response(None, status_code=204)
-
+    
+    # Get the updated habit with new count
+    habits = db.get_habits_with_counts()
+    updated_habit = next((h for h in habits if str(h["id"]) == habit_id), None)
+    
+    return HabitCard(updated_habit)
+    
 # Start server
 if __name__ == "__main__":
     serve()

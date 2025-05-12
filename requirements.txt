@@ -2,4 +2,3 @@ python-fasthtml
 monsterui
 apsw
 plotly
-pandas

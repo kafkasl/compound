@@ -1,0 +1,14 @@
+*.pyc
+*__pycache__*
+.venv
+.env
+.vscode
+talk2apis
+.DS_Store
+user-scripts
+
+venv
+plash.env
+.plash
+.sesskey
+db

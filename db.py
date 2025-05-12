@@ -1,13 +1,18 @@
 import apsw
 import datetime as dt
 from pathlib import Path
-import plotly.express as px
-import pandas as pd
-import json
+import os
 
-# Create db directory if it doesn't exist
-db_path = Path("db/habits.db")
-db_path.parent.mkdir(parents=True, exist_ok=True)
+
+# Determine database path based on environment
+if os.environ.get("PLASH_PRODUCTION") == "1":
+    # Production path in /app directory
+    db_path = Path("/app/habits_production.db")
+else:
+    # Development path
+    db_path = Path("db/habits.db")
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
 conn = apsw.Connection(str(db_path))
 
 # Init DB
@@ -92,3 +97,36 @@ def get_heatmap_data():
         "dates": date_range,
         "data": all_data
     }
+
+def get_habits_with_counts():
+    today = dt.date.today().isoformat()
+    habits = get_habits()
+    
+    # Add today's counts to each habit
+    for habit in habits:
+        habit_id = habit["id"]
+        # Query for today's total and count
+        cur = conn.cursor()
+        
+        # Get total volume
+        total_result = cur.execute("""
+            SELECT SUM(value) 
+            FROM entries 
+            WHERE habit_id = ? AND date = ?
+        """, (habit_id, today)).fetchone()
+        
+        # Get count of entries
+        count_result = cur.execute("""
+            SELECT COUNT(*) 
+            FROM entries 
+            WHERE habit_id = ? AND date = ?
+        """, (habit_id, today)).fetchone()
+        
+        # Add values to the habit data
+        today_total = total_result[0] if total_result[0] is not None else 0
+        today_count = count_result[0] if count_result[0] is not None else 0
+        
+        habit["today_total"] = today_total
+        habit["today_count"] = today_count
+    
+    return habits
