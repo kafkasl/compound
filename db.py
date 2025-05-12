@@ -1,11 +1,13 @@
 import apsw
 import datetime as dt
 from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
-import io
+import plotly.express as px
+import pandas as pd
+import json
 
-db_path = Path("habits.db")
+# Create db directory if it doesn't exist
+db_path = Path("db/habits.db")
+db_path.parent.mkdir(parents=True, exist_ok=True)
 conn = apsw.Connection(str(db_path))
 
 # Init DB
@@ -47,33 +49,46 @@ def get_habits():
             for id, name, unit, default_value in 
             conn.cursor().execute("SELECT id, name, unit, default_value FROM habits")]
 
-def get_heatmap_data(habit_id):
-    cur = conn.cursor()
-    entries = cur.execute("""
-        SELECT date, SUM(value) FROM entries 
-        WHERE habit_id = ? GROUP BY date
-        ORDER BY date""", (habit_id,)).fetchall()
-    return dict(entries)
 
-# Visualization
-def generate_heatmap(habit_id):
-    habit = conn.cursor().execute("SELECT name, unit FROM habits WHERE id = ?", 
-                                 (habit_id,)).fetchone()
-    data = get_heatmap_data(habit_id)
+def get_heatmap_data():
+    # Get all habits
+    habits = get_habits()
     
-    # Create calendar heatmap (simple version)
-    dates = list(data.keys())
-    values = list(data.values())
+    # Determine date range (last 30 days by default)
+    end_date = dt.date.today()
+    start_date = end_date - dt.timedelta(days=30)
+    date_range = [start_date + dt.timedelta(days=x) for x in range(31)]
+    date_strs = [d.isoformat() for d in date_range]
     
-    plt.figure(figsize=(10, 2))
-    plt.bar(dates, values, color='green')
-    plt.title(f"{habit[0]} ({habit[1] or 'count'})")
-    plt.tight_layout()
+    # Initialize data
+    habit_names = []
+    all_data = []
     
-    img_bytes = io.BytesIO()
-    plt.savefig(img_bytes, format='png')
-    img_bytes.seek(0)
-    plt.close()
+    # Get data for each habit
+    for habit in habits:
+        habit_id = habit["id"]
+        habit_name = habit["name"]
+        habit_names.append(habit_name)
+        
+        # Query entries for this habit in date range
+        cur = conn.cursor()
+        entries = cur.execute("""
+            SELECT date, SUM(value) 
+            FROM entries 
+            WHERE habit_id = ? AND date >= ? AND date <= ?
+            GROUP BY date
+            ORDER BY date
+        """, (habit_id, start_date.isoformat(), end_date.isoformat())).fetchall()
+        
+        # Convert to dict for easier lookup
+        data_dict = dict(entries)
+        
+        # Create row of values for this habit (one per date)
+        row_data = [data_dict.get(date, 0) for date in date_strs]
+        all_data.append(row_data)
     
-    return img_bytes
-
+    return {
+        "habits": habit_names,
+        "dates": date_range,
+        "data": all_data
+    }
