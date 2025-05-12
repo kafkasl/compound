@@ -68,17 +68,22 @@ def get_heatmap_data():
     
     # Initialize data
     habit_names = []
+    habit_units = []  # Add this to store units
     all_data = []
+    count_data = []
     
     # Get data for each habit
     for habit in habits:
         habit_id = habit["id"]
         habit_name = habit["name"]
-        habit_names.append(habit_name)
+        habit_unit = habit["unit"] or ""  # Get unit (or empty string if None)
         
-        # Query entries for this habit in date range
+        habit_names.append(habit_name)
+        habit_units.append(habit_unit)
+        
+        # Query entries for this habit in date range - get BOTH sum and count
         cur = conn.cursor()
-        entries = cur.execute("""
+        sums = cur.execute("""
             SELECT date, SUM(value) 
             FROM entries 
             WHERE habit_id = ? AND date >= ? AND date <= ?
@@ -86,17 +91,31 @@ def get_heatmap_data():
             ORDER BY date
         """, (habit_id, start_date.isoformat(), end_date.isoformat())).fetchall()
         
-        # Convert to dict for easier lookup
-        data_dict = dict(entries)
+        counts = cur.execute("""
+            SELECT date, COUNT(*) 
+            FROM entries 
+            WHERE habit_id = ? AND date >= ? AND date <= ?
+            GROUP BY date
+            ORDER BY date
+        """, (habit_id, start_date.isoformat(), end_date.isoformat())).fetchall()
         
-        # Create row of values for this habit (one per date)
-        row_data = [data_dict.get(date, 0) for date in date_strs]
-        all_data.append(row_data)
+        # Convert to dicts for easier lookup
+        sum_dict = dict(sums)
+        count_dict = dict(counts)
+        
+        # Create rows of values for this habit (one per date)
+        sum_row = [sum_dict.get(date, 0) for date in date_strs]
+        count_row = [count_dict.get(date, 0) for date in date_strs]
+        
+        all_data.append(sum_row)
+        count_data.append(count_row)
     
     return {
         "habits": habit_names,
+        "units": habit_units,
         "dates": date_range,
-        "data": all_data
+        "data": all_data,
+        "counts": count_data
     }
 
 def get_habits_with_counts():

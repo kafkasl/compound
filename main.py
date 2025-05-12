@@ -2,18 +2,15 @@ from fasthtml.common import *
 from monsterui.all import *
 import db
 import datetime as dt
-import plotly.graph_objects as go
+from heatmap import HeatmapComponent
 
-# Headers with plotly included
+
 hdrs = (
     Theme.blue.headers(),
     Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js")
 )
 
-# Create app
 app, rt = fast_app(hdrs=hdrs)
-
-# Initialize database
 db.init_db()
 
 def NewHabitForm():
@@ -60,43 +57,6 @@ def HabitCard(h):
         cls="habit-card"
     )
 
-def HeatmapComponent():
-    # Create GitHub heatmap
-    heatmap_data = db.get_heatmap_data()
-    habit_names = heatmap_data["habits"]
-    dates = heatmap_data["dates"]
-    z_values = heatmap_data["data"]
-    
-    # Create empty placeholder if no data
-    if not habit_names or not dates:
-        habit_names = ["No habits recorded yet"]
-        dates = [dt.date.today() - dt.timedelta(days=x) for x in range(5)]
-        z_values = [[0, 0, 0, 0, 0]]
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=z_values,
-        x=dates,
-        y=habit_names,
-        colorscale='Viridis'
-    ))
-    
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        height=max(250, len(habit_names) * 40 + 100),
-        xaxis_nticks=15,
-        xaxis=dict(
-            tickformat="%b %d",
-            tickangle=-45
-        )
-    )
-    
-    heatmap_html = fig.to_html(include_plotlyjs=False, full_html=False, config={'displayModeBar': False})
-    
-    return Card(
-        Safe(heatmap_html),
-    )
 
 @app.get
 def index():
@@ -107,7 +67,7 @@ def index():
     cards = [HabitCard(h) for h in habits ]
     
     # GitHub-style heatmap
-    github_heatmap = HeatmapComponent()
+    github_heatmap = HeatmapComponent(db.get_heatmap_data())
     
     return Container(
             DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
