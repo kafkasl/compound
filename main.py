@@ -109,14 +109,13 @@ def index():
     # GitHub-style heatmap
     github_heatmap = HeatmapComponent()
     
-    return Titled("Habit Tracker", 
-        Container(
-            H3(today),
+    return Container(
+            DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
             Card(NewHabitForm()),
             Grid(*cards, gap=4, cls="mt-4"),
             github_heatmap
         )
-    )
+    
 
 # Add habit
 @app.post

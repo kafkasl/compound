@@ -7,11 +7,12 @@ import os
 # Determine database path based on environment
 if os.environ.get("PLASH_PRODUCTION") == "1":
     # Production path in /app directory
-    db_path = Path("/app/habits_production.db")
+    db_path = Path("db/habits_production.db")
 else:
     # Development path
     db_path = Path("db/habits.db")
-    db_path.parent.mkdir(parents=True, exist_ok=True)
+    
+db_path.parent.mkdir(parents=True, exist_ok=True)
 
 conn = apsw.Connection(str(db_path))
 
