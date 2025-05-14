@@ -7,6 +7,17 @@
     min-width: 10rem;
 }
 
+/* Trucate the habit name in card */
+.habit-card h4{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+}
+
+
+
 /* 
 Habit Actions - Responsive Stacking: 
 Controls the layout of habit action items (info, buttons, range),
@@ -20,21 +31,26 @@ on smaller screens (info/buttons side-by-side, range full-width below).
 }
 
 .habit-actions-container > :nth-child(1) { /* Habit Info */
-    flex: 1 1 30%; 
+    flex: 1 1 35%; 
+    min-width: 0;
 }
 
 .habit-actions-container > :nth-child(2) { /* Buttons */
-    flex: 1 1 30%;
+    flex: 1 1 25%;
     display: flex; 
     align-items: center;
+    padding: 0 0.5rem;
 }
 
 .habit-actions-container > :nth-child(2) Button {
-    margin-right: 0.5rem;
+    margin: 0;
+    width: 2rem;
+    height: 2rem;
 }
 
 .habit-actions-container > :nth-child(3) { /* Range Slider */
     flex: 1 1 30%;
+    align-self: flex-end;
 }
 
 /* Responsive styles */

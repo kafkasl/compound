@@ -37,8 +37,8 @@ def HabitCard(h):
             Form(
                 Div(
                     Div(
-                        H4(h["name"]),
-                        P(f"Today: {today_count}× ({today_total} {unit_display})", cls=TextPresets.muted_sm),
+                        H4(h["name"], title=h["name"], data_tooltip=h["name"]),
+                        P(f"{today_count}× ({today_total} {unit_display})", cls=TextPresets.muted_sm),
                     ),
                     Div(
                         Button("+1"),
@@ -75,9 +75,9 @@ def index():
     github_heatmap = HeatmapComponent(db.get_heatmap_data())
     
     return Container(
-            Div(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
+            DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
             Card(NewHabitForm()),
-            Grid(*cards, id="habits-grid", cols_max=3, cls="gap-0"),
+            Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0"),
             github_heatmap
         )
     
