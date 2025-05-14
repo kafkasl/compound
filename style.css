@@ -1,0 +1,64 @@
+#habits-grid {
+    margin: 1rem auto;
+}
+
+/* Habit info styles */
+.habit-info {
+    min-width: 10rem;
+}
+
+/* 
+Habit Actions - Responsive Stacking: 
+Controls the layout of habit action items (info, buttons, range),
+making them sit in a row on larger screens and stack responsively 
+on smaller screens (info/buttons side-by-side, range full-width below).
+*/
+.habit-actions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.habit-actions-container > :nth-child(1) { /* Habit Info */
+    flex: 1 1 30%; 
+}
+
+.habit-actions-container > :nth-child(2) { /* Buttons */
+    flex: 1 1 30%;
+    display: flex; 
+    align-items: center;
+}
+
+.habit-actions-container > :nth-child(2) Button {
+    margin-right: 0.5rem;
+}
+
+.habit-actions-container > :nth-child(3) { /* Range Slider */
+    flex: 1 1 30%;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    #new-habit-form div {
+        flex-direction: column;
+    }
+    
+    #new-habit-form input {
+        margin: 0 0 0.5rem 0;
+    }
+
+    /* Responsive stacking for habit actions */
+    .habit-actions-container > :nth-child(1) { /* Habit Info */
+        flex-basis: 48%; 
+    }
+
+    .habit-actions-container > :nth-child(2) { /* Buttons */
+        flex-basis: 48%; 
+    }
+
+    .habit-actions-container > :nth-child(3) { /* Range Slider */
+        flex-basis: 100%;
+    }
+
+}
+

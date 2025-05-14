@@ -7,7 +7,8 @@ from heatmap import HeatmapComponent
 
 hdrs = (
     Theme.blue.headers(),
-    Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js")
+    Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js"),
+    Link(rel='stylesheet', href='style.css', type='text/css')
 )
 
 app, rt = fast_app(hdrs=hdrs)
@@ -17,8 +18,8 @@ def NewHabitForm():
     return Form(
         DivHStacked(
         Input(name="name", placeholder="Habit name"),
-            Input(name="unit", placeholder="Unit (s/kg)", cls="mx-2 w-40"),
-            Input(name="value", type="number", value="1.0", cls="mx-2 w-40"),
+            Input(name="unit", placeholder="Unit (s/kg)"),
+            Input(name="value", type="number", value="1.0"),
         Button("Add"),
         ),
         hx_post=add_habit, hx_swap="outerHTML",
@@ -34,27 +35,27 @@ def HabitCard(h):
     
     return Card(
             Form(
-            DivHStacked(
                 Div(
-                    H4(h["name"]),
-                    P(f"Today: {today_count}× ({today_total} {unit_display})", cls=TextPresets.muted_sm),
-                    cls="min-w-40"
-                ),
-                Div(
+                    Div(
+                        H4(h["name"]),
+                        P(f"Today: {today_count}× ({today_total} {unit_display})", cls=TextPresets.muted_sm),
+                    ),
+                    Div(
+                        Button("+1"),
+                        Button("-1", 
+                            hx_delete=f"/delete_last/{h['id']}", 
+                            hx_swap="outerHTML", 
+                            hx_target="closest .habit-card"),
+                        Input(type="hidden", name="habit_id", value=h["id"]),
+                    ),
                     Range(
                         label=h["unit"],
-                        id=f"track-input-{h['id']}", name="value", value=str(h["default_value"]), 
-                        min=0, max=60, step=1, hx_trigger="change"
+                        id=f"track-input-{h['id']}", 
+                        name="value", value=str(h["default_value"]), 
+                        min=0, max=60, step=1, hx_trigger="change",
                     ),
-                    cls="flex-1 px-4"
+                    cls="habit-actions-container"
                 ),
-                Button("+1"),
-                Button("-1", 
-                      hx_delete=f"/delete_last/{h['id']}", 
-                      hx_swap="outerHTML", 
-                      hx_target="closest .habit-card"),
-                Input(type="hidden", name="habit_id", value=h["id"]),
-            ),
             hx_post=track_habit,
             hx_swap="outerHTML", hx_target="closest .habit-card"
         ),
@@ -74,9 +75,9 @@ def index():
     github_heatmap = HeatmapComponent(db.get_heatmap_data())
     
     return Container(
-            DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
+            Div(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
             Card(NewHabitForm()),
-            Grid(*cards, gap=4, cls="mt-4"),
+            Grid(*cards, id="habits-grid", cols_max=3, cls="gap-0"),
             github_heatmap
         )
     
