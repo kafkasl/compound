@@ -150,3 +150,21 @@ def get_habits_with_counts():
         habit["today_count"] = today_count
     
     return habits
+
+def delete_last_entry(habit_id):
+    """Delete the most recent entry for a habit"""
+    cur = conn.cursor()
+    
+    # Find the latest entry ID for this habit
+    entry = cur.execute("""
+        SELECT id FROM entries 
+        WHERE habit_id = ? 
+        ORDER BY timestamp DESC LIMIT 1
+    """, (habit_id,)).fetchone()
+    
+    if not entry:
+        return False
+    
+    # Delete the entry
+    cur.execute("DELETE FROM entries WHERE id = ?", (entry[0],))
+    return True

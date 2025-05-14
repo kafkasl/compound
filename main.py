@@ -16,10 +16,10 @@ db.init_db()
 def NewHabitForm():
     return Form(
         DivHStacked(
-            Input(name="name", placeholder="Habit name"),
+        Input(name="name", placeholder="Habit name"),
             Input(name="unit", placeholder="Unit (s/kg)", cls="mx-2 w-40"),
             Input(name="value", type="number", value="1.0", cls="mx-2 w-40"),
-            Button("Add"),
+        Button("Add"),
         ),
         hx_post=add_habit, hx_swap="outerHTML",
         id='new-habit-form',
@@ -33,7 +33,7 @@ def HabitCard(h):
     unit_display = h["unit"] if h["unit"] else ""
     
     return Card(
-        Form(
+            Form(
             DivHStacked(
                 Div(
                     H4(h["name"]),
@@ -48,7 +48,11 @@ def HabitCard(h):
                     ),
                     cls="flex-1 px-4"
                 ),
-                Button("Track"),
+                Button("+1"),
+                Button("-1", 
+                      hx_delete=f"/delete_last/{h['id']}", 
+                      hx_swap="outerHTML", 
+                      hx_target="closest .habit-card"),
                 Input(type="hidden", name="habit_id", value=h["id"]),
             ),
             hx_post=track_habit,
@@ -95,7 +99,18 @@ def track_habit(habit_id: str, value: float):
     updated_habit = next((h for h in habits if str(h["id"]) == habit_id), None)
     
     return HabitCard(updated_habit)
+
+# Delete last entry endpoint
+@app.delete("/delete_last/{habit_id}")
+def delete_last(habit_id: str):
+    db.delete_last_entry(habit_id)
     
+    # Get the updated habit with new count
+    habits = db.get_habits_with_counts()
+    updated_habit = next((h for h in habits if str(h["id"]) == habit_id), None)
+    
+    return HabitCard(updated_habit)
+
 # Start server
 if __name__ == "__main__":
     serve()

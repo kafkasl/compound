@@ -36,7 +36,7 @@ def HeatmapComponent(heatmap_data):
             if count > 0:
                 txt += f"<br>Count: {count}×"
                 txt += f"<br>Total: {volume} {unit}"
-
+                
             hover_row.append(txt)
         hover_text.append(hover_row)
     
