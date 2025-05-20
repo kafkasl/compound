@@ -74,7 +74,7 @@ def index():
     # GitHub-style heatmap
     github_heatmap = HeatmapComponent(db.get_heatmap_data())
     
-    return Container(
+    return Title("Compound Habits"), Container(
             DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
             Card(NewHabitForm()),
             Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0"),
