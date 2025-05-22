@@ -76,4 +76,5 @@ def HeatmapComponent(heatmap_data):
     
     return Card(
         Safe(heatmap_html),
+        id="heatmap", hx_swap_oob="true",
     )

@@ -1,4 +1,5 @@
 from fasthtml.common import *
+from fastcore.all import *
 from monsterui.all import *
 import db
 import datetime as dt
@@ -15,22 +16,22 @@ app, rt = fast_app(hdrs=hdrs)
 db.init_db()
 
 def NewHabitForm():
-    return Form(
-        DivHStacked(
-        Input(name="name", placeholder="Habit name"),
-            Input(name="unit", placeholder="Unit (s/kg)"),
-            Input(name="value", type="number", value="1.0"),
-        Button("Add"),
-        ),
-        hx_post=add_habit, hx_swap="outerHTML",
+    return Card(
+            Form(
+            DivHStacked(
+            Input(name="name", placeholder="Habit name"),
+                Input(name="unit", placeholder="Unit (s/kg)"),
+                Input(name="value", type="number", value="1.0"),
+            Button("Add"),
+            ),
+            hx_post=add_habit),
         id='new-habit-form',
         hx_swap_oob="true"
     )
 
 def HabitCard(h):
     # Display today's total along with the habit name
-    today_total = h.get("today_total", 0)
-    today_count = h.get("today_count", 0)
+    today_total, today_count = h.get("today_total", 0), h.get("today_count", 0)
     unit_display = h["unit"] if h["unit"] else ""
     
     return Card(
@@ -62,23 +63,26 @@ def HabitCard(h):
         cls="habit-card"
     )
 
+def generate_habit_grid():
+    habits = db.get_habits_with_counts()
+    cards = [HabitCard(h) for h in habits]
+    return Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0", hx_swap_oob="true")
+
+def generate_heatmap():
+    return HeatmapComponent(db.get_heatmap_data())
 
 @app.get
 def index():
-    habits = db.get_habits_with_counts()
     today = dt.date.today().strftime("%A, %B %d, %Y")
     
-    print(f"{habits=}")
-    cards = [HabitCard(h) for h in habits ]
-    
-    # GitHub-style heatmap
-    github_heatmap = HeatmapComponent(db.get_heatmap_data())
-    
-    return Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"), Title("Compound Habits"), Container(
-            DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
-            Card(NewHabitForm()),
-            Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0"),
-            github_heatmap
+    return (Title("Compound Habits"),
+            Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"), 
+            Container(
+                DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
+                NewHabitForm(),
+                generate_habit_grid(),
+                generate_heatmap()
+            )
         )
     
 
@@ -87,7 +91,7 @@ def index():
 def add_habit(name: str, unit: str, value: str):
     print(name, unit, value)
     db.add_habit(name, unit, float(value))
-    return NewHabitForm()
+    return NewHabitForm(), generate_habit_grid(), generate_heatmap()
 
 # Track habit
 @app.post
@@ -97,20 +101,19 @@ def track_habit(habit_id: str, value: float):
     
     # Get the updated habit with new count
     habits = db.get_habits_with_counts()
-    updated_habit = next((h for h in habits if str(h["id"]) == habit_id), None)
+    updated_habit = first((h for h in habits if str(h["id"]) == habit_id))
     
-    return HabitCard(updated_habit)
+    return (HabitCard(updated_habit),
+            generate_habit_grid(),
+            generate_heatmap())
+
 
 # Delete last entry endpoint
 @app.delete("/delete_last/{habit_id}")
 def delete_last(habit_id: str):
     db.delete_last_entry(habit_id)
     
-    # Get the updated habit with new count
-    habits = db.get_habits_with_counts()
-    updated_habit = next((h for h in habits if str(h["id"]) == habit_id), None)
-    
-    return HabitCard(updated_habit)
+    return  generate_habit_grid(), generate_heatmap()
 
 # Start server
 if __name__ == "__main__":
