@@ -60,6 +60,11 @@ def HabitCard(h):
             hx_post=track_habit,
             hx_swap="outerHTML", hx_target="closest .habit-card"
         ),
+        A("×", 
+            cls="delete-habit", 
+            hx_delete=f"/habit/{h['id']}", 
+            hx_confirm=f"Delete habit '{h['name']}'?",
+        ),
         cls="habit-card"
     )
 
@@ -114,6 +119,13 @@ def delete_last(habit_id: str):
     db.delete_last_entry(habit_id)
     
     return  generate_habit_grid(), generate_heatmap()
+
+# Delete habit endpoint
+@app.delete("/habit/{habit_id}")
+def delete_habit(habit_id: str):
+    db.delete_habit(habit_id)
+    
+    return generate_habit_grid(), generate_heatmap()
 
 # Start server
 if __name__ == "__main__":

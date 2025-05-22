@@ -7,6 +7,10 @@
     min-width: 10rem;
 }
 
+.habit-card {
+    position: relative;
+}
+
 /* Trucate the habit name in card */
 .habit-card h4{
     white-space: nowrap;
@@ -77,4 +81,27 @@ on smaller screens (info/buttons side-by-side, range full-width below).
     }
 
 }
+
+/* Delete habit - ultra minimal anchor */
+.delete-habit {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    text-decoration: none;
+    opacity: 0.4;
+    margin: 0 !important; /* Override any margin */
+    cursor: pointer;
+}
+
+/* Explicitly override the Tailwind space-y utility */
+.space-y-6 > .delete-habit {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.delete-habit:hover {
+    opacity: 1;
+}
+
+
 
