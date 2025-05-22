@@ -2,7 +2,35 @@
     margin: 1rem auto;
 }
 
-/* Habit info styles */
+/* Header layout styling */
+.header-container {
+    margin-bottom: 1rem;
+    overflow: hidden; /* Clearfix */
+}
+
+.header-title, .header-date {
+    float: left;
+    margin-right: 1rem;
+}
+
+.header-container > div:last-child {
+    float: right;
+}
+@media (min-width: 769px) {
+    .header-container > div, .header-container > p {
+        line-height: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-container > * {
+        float: none;
+        display: block;
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+}
+
 .habit-info {
     min-width: 10rem;
 }
@@ -102,6 +130,7 @@ on smaller screens (info/buttons side-by-side, range full-width below).
 .delete-habit:hover {
     opacity: 1;
 }
+
 
 
 

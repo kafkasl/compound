@@ -1,10 +1,22 @@
 from fasthtml.common import *
 from fastcore.all import *
 from monsterui.all import *
-import db
-import datetime as dt
-from heatmap import HeatmapComponent
+from fasthtml.oauth import GoogleAppClient, OAuth
 
+from heatmap import HeatmapComponent
+import db
+
+import datetime as dt
+
+cli = GoogleAppClient.from_file('client_secret.json')
+
+class Auth(OAuth):
+    def get_auth(self, info, ident, session, state):
+        print(f"{info=}")
+        if info.email_verified and info.email:
+            # Ensure user exists and set current user context
+            db.ensure_user(info.sub, info.email, info.name, info.picture)
+            return RedirectResponse('/', status_code=303)
 
 hdrs = (
     Theme.blue.headers(),
@@ -12,8 +24,11 @@ hdrs = (
     Link(rel='stylesheet', href='style.css', type='text/css')
 )
 
-app, rt = fast_app(hdrs=hdrs)
-db.init_db()
+app, rt = fast_app(hdrs=hdrs, static_path="static")
+oauth = Auth(app, cli)
+
+# @rt("/{fname:path}.{ext:static}")
+# def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
 
 def NewHabitForm():
     return Card(
@@ -68,64 +83,90 @@ def HabitCard(h):
         cls="habit-card"
     )
 
-def generate_habit_grid():
-    habits = db.get_habits_with_counts()
+def generate_habit_grid(auth):
+    habits = db.get_habits_with_counts(auth)
     cards = [HabitCard(h) for h in habits]
     return Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0", hx_swap_oob="true")
 
-def generate_heatmap():
-    return HeatmapComponent(db.get_heatmap_data())
+def generate_heatmap(auth):
+    return HeatmapComponent(db.get_heatmap_data(auth))
+
+
+def UserMenu(email: str):
+    return DivHStacked(P(email), A("Logout", href="/logout"))
 
 @app.get
-def index():
+def index(auth):
+    user = db.get_user(auth)
+    print(f"{user=}")
     today = dt.date.today().strftime("%A, %B %d, %Y")
     
     return (Title("Compound Habits"),
             Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"), 
             Container(
-                DivHStacked(H1('Compound Habits'), P(today, cls=TextPresets.muted_sm)),
+                Div(
+                    H1('Compound Habits', cls="header-title"), 
+                    P(today, cls=TextPresets.muted_sm + " header-date"),
+                    UserMenu(user.email),
+                    cls="header-container"
+                ),
                 NewHabitForm(),
-                generate_habit_grid(),
-                generate_heatmap()
+                generate_habit_grid(auth),
+                generate_heatmap(auth)
             )
         )
-    
+@app.get('/login')
+def login(req): 
+    return (
+        Title("Compound Habits - Login"),
+        Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"),
+        DivVStacked(
+            Img(src="static/img/favicon.svg", width=100),
+            DivVStacked(
+                H1('Compound Habits', cls="text-center"),
+                P("Track your habits and build consistency", cls=TextPresets.muted_sm + " text-center"),
+                A(Button("Log in with Google"), href=oauth.login_link(req))
+            ),
+            cls="pt-[20vh]",
+        ),
+    )
 
-# Add habit
-@app.post
-def add_habit(name: str, unit: str, value: str):
-    print(name, unit, value)
-    db.add_habit(name, unit, float(value))
-    return NewHabitForm(), generate_habit_grid(), generate_heatmap()
+@app.get('/logout')
+def logout(session):
+    session.pop('auth', None)
+    return RedirectResponse('/login', status_code=303)
 
-# Track habit
 @app.post
-def track_habit(habit_id: str, value: float):
-    print(f"habit_id: {habit_id=}, value: {value=}")
-    db.record_habit(habit_id, float(value))
+def add_habit(name: str, unit: str, value: str, auth):
+    db.add_habit(auth, name, unit, float(value))
+    return NewHabitForm(), generate_habit_grid(auth), generate_heatmap(auth)
+
+@app.post
+def track_habit(habit_id: str, value: float, auth):
+    db.record_habit(auth, habit_id, float(value))
     
     # Get the updated habit with new count
-    habits = db.get_habits_with_counts()
+    habits = db.get_habits_with_counts(auth)
     updated_habit = first((h for h in habits if str(h["id"]) == habit_id))
     
     return (HabitCard(updated_habit),
-            generate_habit_grid(),
-            generate_heatmap())
+            generate_habit_grid(auth),
+            generate_heatmap(auth))
 
 
-# Delete last entry endpoint
 @app.delete("/delete_last/{habit_id}")
-def delete_last(habit_id: str):
-    db.delete_last_entry(habit_id)
+def delete_last(habit_id: str, auth):
+    """Delete last entry of a given habit"""
+    db.delete_last_entry(auth, habit_id)
     
-    return  generate_habit_grid(), generate_heatmap()
+    return generate_habit_grid(auth), generate_heatmap(auth)
 
-# Delete habit endpoint
 @app.delete("/habit/{habit_id}")
-def delete_habit(habit_id: str):
-    db.delete_habit(habit_id)
+def delete_habit(habit_id: str, auth):
+    db.delete_habit(auth, habit_id)
     
-    return generate_habit_grid(), generate_heatmap()
+    return generate_habit_grid(auth), generate_heatmap(auth)
+
 
 # Start server
 if __name__ == "__main__":

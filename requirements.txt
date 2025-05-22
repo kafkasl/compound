@@ -2,3 +2,5 @@ python-fasthtml
 monsterui
 apsw
 plotly
+fastcore
+fastmigrate
