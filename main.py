@@ -23,12 +23,11 @@ hdrs = (
     Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js"),
     Link(rel='stylesheet', href='style.css', type='text/css')
 )
+skip = ('/login', '/logout', '/redirect', r'/.*\.(png|jpg|ico|css|js|md|svg)', '/static')
 
-app, rt = fast_app(hdrs=hdrs, static_path="static")
-oauth = Auth(app, cli)
+app, rt = fast_app(hdrs=hdrs)
+oauth = Auth(app, cli, skip=skip)
 
-# @rt("/{fname:path}.{ext:static}")
-# def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
 
 def NewHabitForm():
     return Card(
@@ -102,7 +101,7 @@ def index(auth):
     today = dt.date.today().strftime("%A, %B %d, %Y")
     
     return (Title("Compound Habits"),
-            Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"), 
+            Favicon("/static/img/favicon.svg", "/static/img/favicon-dark.svg"), 
             Container(
                 Div(
                     H1('Compound Habits', cls="header-title"), 
@@ -119,9 +118,9 @@ def index(auth):
 def login(req): 
     return (
         Title("Compound Habits - Login"),
-        Favicon("static/img/favicon.svg", "static/img/favicon-dark.svg"),
+        Favicon("/static/img/favicon.svg", "/static/img/favicon-dark.svg"),
         DivVStacked(
-            Img(src="static/img/favicon.svg", width=100),
+            Img(src="/static/img/favicon.svg", width=100),
             DivVStacked(
                 H1('Compound Habits', cls="text-center"),
                 P("Track your habits and build consistency", cls=TextPresets.muted_sm + " text-center"),
