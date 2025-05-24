@@ -10,7 +10,7 @@ import apsw.bestpractice
 apsw.bestpractice.apply(apsw.bestpractice.recommended)
 
 # Determine database path based on environment
-if os.environ.get("PLASH_PRODUCTION") == "1": db_path = Path("data/habits_prod.db")
+if os.environ.get("PLASH_PRODUCTION") == "1": db_path = Path("data/habits-prod.db")
 else: db_path = Path("data/habits.db")
 
 db_path.parent.mkdir(parents=True, exist_ok=True)    
@@ -132,14 +132,24 @@ def get_habits_with_counts(user_id):
     today = dt.date.today()
     habits = get_habits(user_id)
     
-    # Add today's counts to each habit
+    # Add today's counts and latest entry value to each habit
     for habit in habits:
         sum_dict, count_dict = get_habit_stats(habit["id"], user_id, today, today)
+        
+        # Get latest entry value for this habit
+        cur = conn.cursor()
+        latest_entry = cur.execute("""
+            SELECT value FROM entries e
+            JOIN habits h ON e.habit_id = h.id
+            WHERE e.habit_id = ? AND h.user_id = ?
+            ORDER BY e.timestamp DESC LIMIT 1
+        """, (habit["id"], user_id)).fetchone()
         
         # Add values to the habit data (using today's date as key)
         today_str = today.isoformat()
         habit["today_total"] = sum_dict.get(today_str, 0)
         habit["today_count"] = count_dict.get(today_str, 0)
+        habit["latest_value"] = latest_entry[0] if latest_entry else habit["default_value"]
     
     return habits
 

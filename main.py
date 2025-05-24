@@ -66,7 +66,7 @@ def HabitCard(h):
                     Range(
                         label=h["unit"],
                         id=f"track-input-{h['id']}", 
-                        name="value", value=str(h["default_value"]), 
+                        name="value", value=str(h["latest_value"]), 
                         min=0, max=60, step=1, hx_trigger="change",
                     ),
                     cls="habit-actions-container"
@@ -149,7 +149,6 @@ def track_habit(habit_id: str, value: float, auth):
     updated_habit = first((h for h in habits if str(h["id"]) == habit_id))
     
     return (HabitCard(updated_habit),
-            generate_habit_grid(auth),
             generate_heatmap(auth))
 
 
