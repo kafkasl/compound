@@ -158,7 +158,7 @@ def delete_last_entry(user_id, habit_id):
     cur = conn.cursor()
     
     # Delete the latest entry in a single statement
-    result = cur.execute("""
+    cur.execute("""
         DELETE FROM entries WHERE id IN (
             SELECT id FROM (
                 SELECT e.id FROM entries e
@@ -170,7 +170,8 @@ def delete_last_entry(user_id, habit_id):
     """, (habit_id, user_id))
     
     # Return true if any row was deleted
-    return result.rowcount > 0
+    changes = conn.changes()
+    return changes > 0
 
 def delete_habit(user_id, habit_id):
     """Delete a habit and all its entries"""
@@ -178,6 +179,7 @@ def delete_habit(user_id, habit_id):
     
     # Delete the habit (with user_id check for security)
     # Entries will be deleted automatically via ON DELETE CASCADE
-    rows_affected = cur.execute("DELETE FROM habits WHERE id = ? AND user_id = ?", 
-                               (habit_id, user_id)).rowcount
-    return rows_affected > 0
+    cur.execute("DELETE FROM habits WHERE id = ? AND user_id = ?", 
+                               (habit_id, user_id))
+    changes = conn.changes()
+    return changes > 0
