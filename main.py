@@ -21,13 +21,15 @@ class Auth(OAuth):
 hdrs = (
     Theme.blue.headers(),
     Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js"),
-    Link(rel='stylesheet', href='style.css', type='text/css')
+    Link(rel='stylesheet', href='style.css', type='text/css'),
+    # Script("htmx.logAll();") # debug HTMX events
 )
 skip = ('/login', '/logout', '/redirect', r'/.*\.(png|jpg|ico|css|js|md|svg)', '/static')
 
 app, rt = fast_app(hdrs=hdrs)
 oauth = Auth(app, cli, skip=skip)
 
+def UserMenu(email: str): return DivHStacked(P(email), A("Logout", href="/logout"))
 
 def NewHabitForm():
     return Card(
@@ -40,7 +42,8 @@ def NewHabitForm():
             ),
             hx_post=add_habit),
         id='new-habit-form',
-        hx_swap_oob="true"
+        hx_target="#habits-grid",
+        hx_swap="beforeend"
     )
 
 def HabitCard(h):
@@ -78,21 +81,28 @@ def HabitCard(h):
             cls="delete-habit", 
             hx_delete=f"/habit/{h['id']}", 
             hx_confirm=f"Delete habit '{h['name']}'?",
+            hx_swap="outerHTML", hx_target="closest .habit-card"
         ),
         cls="habit-card"
     )
+
+def generate_habit_card(auth, habit_id):
+    habits = db.get_habits_with_counts(auth)
+    habit = first((h for h in habits if h["id"] == habit_id))
+    return HabitCard(habit)
 
 def generate_habit_grid(auth):
     habits = db.get_habits_with_counts(auth)
     cards = [HabitCard(h) for h in habits]
     return Grid(*cards, id="habits-grid", cols_max=4, cls="gap-0", hx_swap_oob="true")
 
-def generate_heatmap(auth):
-    return HeatmapComponent(db.get_heatmap_data(auth))
-
-
-def UserMenu(email: str):
-    return DivHStacked(P(email), A("Logout", href="/logout"))
+def generate_heatmap(auth): 
+    return Div(
+        HeatmapComponent(db.get_heatmap_data(auth)), 
+        id="heatmap",
+        hx_get="/heatmap",
+        hx_trigger="htmx:afterSwap from:#habits-grid delay:500ms, htmx:beforeCleanupElement from:.habit-card"
+    )
 
 @app.get
 def index(auth):
@@ -137,33 +147,32 @@ def logout(session):
 
 @app.post
 def add_habit(name: str, unit: str, value: str, auth):
-    db.add_habit(auth, name, unit, float(value))
-    return NewHabitForm(), generate_habit_grid(auth), generate_heatmap(auth)
+    habit_id = db.add_habit(auth, name, unit, float(value))
+    return NewHabitForm(), generate_habit_card(auth, habit_id)
 
 @app.post
-def track_habit(habit_id: str, value: float, auth):
+def track_habit(habit_id: int, value: float, auth):
     db.record_habit(auth, habit_id, float(value))
     
     # Get the updated habit with new count
-    habits = db.get_habits_with_counts(auth)
-    updated_habit = first((h for h in habits if str(h["id"]) == habit_id))
-    
-    return (HabitCard(updated_habit),
-            generate_heatmap(auth))
+    return generate_habit_card(auth, habit_id)
+
+@app.get("/heatmap")
+def heatmap(auth):
+    return generate_heatmap(auth)
 
 
 @app.delete("/delete_last/{habit_id}")
-def delete_last(habit_id: str, auth):
+def delete_last(habit_id: int, auth):
     """Delete last entry of a given habit"""
     db.delete_last_entry(auth, habit_id)
-    
-    return generate_habit_grid(auth), generate_heatmap(auth)
+
+    return generate_habit_card(auth, habit_id)
 
 @app.delete("/habit/{habit_id}")
-def delete_habit(habit_id: str, auth):
+def delete_habit(habit_id: int, auth):
     db.delete_habit(auth, habit_id)
-    
-    return generate_habit_grid(auth), generate_heatmap(auth)
+
 
 
 # Start server

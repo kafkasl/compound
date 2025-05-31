@@ -12,3 +12,6 @@ plash.env
 .plash
 .sesskey
 db
+download
+
+client_secret.json
