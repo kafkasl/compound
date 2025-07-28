@@ -70,7 +70,7 @@ def HabitCard(h):
                         label=h["unit"],
                         id=f"track-input-{h['id']}", 
                         name="value", value=str(h["latest_value"]), 
-                        min=0, max=60, step=1, hx_trigger="change",
+                        min=1, max=100, step=1, hx_trigger="change",
                     ),
                     cls="habit-actions-container"
                 ),
