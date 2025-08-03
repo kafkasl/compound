@@ -27,9 +27,6 @@ if not success: raise Exception("Database migration failed!")
 
 conn= apsw.Connection(str(db_path))
 
-
-
-
 def ensure_user(user_id, email, name, picture):
     cur = conn.cursor()
     print(f"Ensuring user {user_id} {email} {name} {picture}")

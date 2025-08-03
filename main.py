@@ -4,6 +4,7 @@ from monsterui.all import *
 from fasthtml.oauth import GoogleAppClient, OAuth
 
 from heatmap import HeatmapComponent
+from plots import HabitLinePlot
 import db
 
 import datetime as dt
@@ -30,6 +31,20 @@ app, rt = fast_app(hdrs=hdrs)
 oauth = Auth(app, cli, skip=skip)
 
 def UserMenu(email: str): return DivHStacked(P(email), A("Logout", href="/logout"))
+
+def PageLayout(*children, title="Compound Habits"):
+    return (Title(title),
+            Favicon("/static/img/favicon.svg", "/static/img/favicon-dark.svg"), 
+            Container(*children))
+
+def Header(user_email, title='Compound Habits'):
+    today = dt.date.today().strftime("%A, %B %d, %Y")
+    return Div(
+        H1(title, cls="header-title"), 
+        P(today, cls=TextPresets.muted_sm + " header-date"),
+        UserMenu(user_email),
+        cls="header-container"
+    )
 
 def NewHabitForm():
     return Card(
@@ -108,22 +123,70 @@ def generate_heatmap(auth):
 def index(auth):
     user = db.get_user(auth)
     print(f"{user=}")
-    today = dt.date.today().strftime("%A, %B %d, %Y")
     
-    return (Title("Compound Habits"),
-            Favicon("/static/img/favicon.svg", "/static/img/favicon-dark.svg"), 
-            Container(
-                Div(
-                    H1('Compound Habits', cls="header-title"), 
-                    P(today, cls=TextPresets.muted_sm + " header-date"),
-                    UserMenu(user.email),
-                    cls="header-container"
-                ),
-                NewHabitForm(),
-                generate_habit_grid(auth),
-                generate_heatmap(auth)
+    return PageLayout(
+        Header(user.email),
+        NewHabitForm(),
+        generate_habit_grid(auth),
+        generate_heatmap(auth)
+    )
+
+def generate_plot(habit_id: int, plot_type: str, auth, days: int = 30):
+    """Generate a plot for a specific habit"""
+    habits = db.get_habits(auth)
+    print(f"{habits=}")
+    habit = next((h for h in habits if h["id"] == habit_id), None)
+    if not habit: return P("Habit not found", cls=TextPresets.muted_sm)
+    
+    # Get specified days of data
+    end_date = dt.date.today()
+    start_date = end_date - dt.timedelta(days=days)
+    date_range = [start_date + dt.timedelta(days=x) for x in range(days + 1)]
+    
+    sum_dict, count_dict = db.get_habit_stats(habit_id, auth, start_date, end_date)
+    
+    if plot_type == "count":
+        values = [count_dict.get(d.isoformat(), 0) for d in date_range]
+    elif plot_type == "sum":
+        values = [sum_dict.get(d.isoformat(), 0) for d in date_range]
+    else:  # average
+        values = [sum_dict.get(d.isoformat(), 0) / count_dict.get(d.isoformat(), 1) 
+                  if count_dict.get(d.isoformat(), 0) > 0 else 0 for d in date_range]
+    
+    return HabitLinePlot(habit["name"], date_range, values, habit.get("unit", ""), plot_type)
+
+@app.get('/plots')
+def plot(auth):
+    habits = db.get_habits(auth)
+
+    return PageLayout(
+        Header(db.get_user(auth).email, title='Habit Plots'),
+        Card(
+            H3("Available Plot Endpoints"),
+            P("/plots/{habit_id}/{type}?days={number}"),
+            Ul(
+                Li("type: count, sum, or average"),
+                Li("days: number of days to show (default: 30)"),
+                Li("Example: /plots/1/sum?days=150"),
+                cls=TextPresets.muted_sm
+            ),
+            H4("Your Habits", cls="mt-4"),
+            Ul(
+                *[Li(A(f"{h['id']} - {h['name']}", href=f"/plots/{h['id']}/sum?days=150")) for h in habits],
+                cls="habit-list"
             )
-        )
+        ),
+        title="Habit Plots - Compound Habits"
+    )
+
+@app.get('/plots/{habit_id}/{plot_type}')
+def plot(habit_id: int, plot_type: str, auth, days: int = 30):
+    return PageLayout(
+        Header(db.get_user(auth).email, title='Habit Plot'),
+        generate_plot(habit_id, plot_type, auth, days),
+        title="Habit Plot - Compound Habits"
+    )
+
 @app.get('/login')
 def login(req): 
     return (
