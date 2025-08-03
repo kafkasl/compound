@@ -26,3 +26,11 @@ db-clear-entries:
 
 download:
     plash_download 
+
+sync-prod-db:
+    rm -rf download
+    plash_download
+    sqlite3 habits-prod.db "PRAGMA wal_checkpoint(FULL); VACUUM;" 
+    rm -rf data download/data/habits.db* download/data/habits-prod.db-shm download/data/monitoring-prod.db-wal
+    mv download/data .
+    mv data/habits-prod.db data/habits.db
